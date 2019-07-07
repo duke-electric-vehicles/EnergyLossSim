@@ -14,19 +14,19 @@ totalLossesLabels = {};
 
 %air drag------------------------------------------------
 airCdA = 0.0438; %coefficient of drag
-airDensity = 1.184; %density of air at 25C and standard pressure, kg/m^3
+airDensity = 1.225; %density of air, kg/m^3
 
-airForce = 0.5 * airDensity * airCdA * v^2;
+% notes:
+%   the speed of the car is not constant, as it accelerates from a
+%   standstill at the beginning. This variable speed is compressed into a
+%   single "RMS" multiplier
+airRMSMultiplier = 1.0149; %rms of the velocity profile, world record attempt
+
+airForce = 0.5 * airDensity * airCdA * (v * airRMSMultiplier)^2;
 airPower = airForce * v;
 
 totalLosses = [totalLosses, airPower];
 totalLossesLabels{end+1} = 'External air drag';
-
-% airRMSMultiplier = 1.0149; %rms of the velocity profile, world record attempt
-% %airRMSMultiplier = 1.044; %sonoma, our first run
-% airRMSLoss = airPower * (airRMSMultiplier ^ 2 - 1);
-% totalLosses = [totalLosses, airRMSLoss];
-% totalLossesLabels{end+1} = 'Drag RMS loss';
 
 %rolling resistance--------------------------------------
 rrCoeff = 0.0015; %coefficient of rolling resistance
@@ -83,9 +83,13 @@ modelTorque = motorCurrent*modelKt  - noLoadTorque;
 modelRsTmp = sqrt(modelRs.^2 + (modelLs*motorRPM*2 / 60 * 2 * pi).^2);
 V = motorRPM / modelKv + motorCurrent.*modelRsTmp;
 
+% notes:
+%   controller in world record car was older than the dyno motor controller
+%       and drew 600mW instead of 300mW
+
 modelLosses(:,:,1) = motorCurrent.^2.*modelRs;     % I2R
 modelLosses(:,:,2) = polyval(PvsERPM,motorRPM*2);  % nonelectrical
-modelLosses(:,:,3) = 0.3*ones(size(motorRPM));     % controller
+modelLosses(:,:,3) = 0.6*ones(size(motorRPM));     % controller
 modelLosses(:,:,4) = 6e-3*modelTorque.^2.*motorRPM;% transmission
 
 motorDutyCycle = sum(totalLosses) / (motorCurrent * motorVoltage);
